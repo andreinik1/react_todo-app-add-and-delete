@@ -36,6 +36,20 @@ export const TodoList: React.FC<Props> = ({
   todoLoaderId,
   setTodoLoaderId,
 }) => {
+  const handleToggleTodoStatus = (todo: Todo) => {
+    todosApi
+      .updateTodo(todo.id, !todo.completed, todo.title)
+      .then(updatedTodo => {
+        setTodoStatus(true);
+        setTodos(prevTodos =>
+          prevTodos.map(t => (t.id === updatedTodo.id ? updatedTodo : t)),
+        );
+      })
+      .finally(() => {
+        setTodoStatus(false);
+      });
+  };
+
   const handleToBlur = (currentTodoItem: Todo) => {
     setEdditingTodo(undefined);
     todosApi
@@ -79,25 +93,7 @@ export const TodoList: React.FC<Props> = ({
               type="checkbox"
               className="todo__status"
               checked={todoToMap.completed}
-              onChange={() => {
-                todosApi
-                  .updateTodo(
-                    todoToMap.id,
-                    !todoToMap.completed,
-                    todoToMap.title,
-                  )
-                  .then(updatedTodo => {
-                    setTodoStatus(true);
-                    setTodos(prevTodos => {
-                      return prevTodos.map(todoItem =>
-                        todoItem.id === updatedTodo.id ? updatedTodo : todoItem,
-                      );
-                    });
-                  })
-                  .finally(() => {
-                    setTodoStatus(false);
-                  });
-              }}
+              onChange={() => handleToggleTodoStatus(todoToMap)}
             />
           </label>
 

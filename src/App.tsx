@@ -91,6 +91,7 @@ export const App: React.FC = () => {
           setCurrentCreatedTodo={setCurrentCreatedTodo}
           setTodos={setTodos}
           setError={setError}
+          todos={todos}
         />
 
         <TodoList

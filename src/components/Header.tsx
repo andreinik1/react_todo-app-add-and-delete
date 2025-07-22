@@ -12,6 +12,7 @@ type Props = {
   setCurrentCreatedTodo: (value: string) => void;
   setTodos: React.Dispatch<React.SetStateAction<Todo[]>>;
   setError: (error: string) => void;
+  todos: Todo[];
 };
 
 export const Header: React.FC<Props> = ({
@@ -23,9 +24,52 @@ export const Header: React.FC<Props> = ({
   setCurrentCreatedTodo,
   setTodos,
   setError,
+  todos,
 }) => {
   const reset = () => {
     setCurrentCreatedTodo('');
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCurrentCreatedTodo(e.currentTarget.value);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+      const newTodo: Omit<Todo, 'id'> = {
+        userId: USER_ID,
+        title: e.currentTarget.value.trim(),
+        completed: false,
+      };
+
+      setIsCreating(true);
+      setTempTodo({ ...newTodo });
+
+      todosApi
+        .addTodo(newTodo)
+        .then(addedTodo => {
+          setTodos((prevTodos: Todo[]) => [...prevTodos, addedTodo]);
+          reset();
+          setTempTodo(null);
+          setIsCreating(false);
+        })
+        .catch(() => {
+          setError('Unable to add a todo');
+          setTimeout(() => {
+            setError('');
+            setIsCreating(false);
+          }, 3000);
+          setTimeout(() => {
+            setTempTodo(null);
+          }, 300);
+          setCurrentCreatedTodo(currentCreatedTodo);
+        });
+    } else if (e.key === 'Enter') {
+      setError('Title should not be empty');
+      setTimeout(() => {
+        setError('');
+      }, 3000);
+    }
   };
 
   useEffect(() => {
@@ -33,6 +77,12 @@ export const Header: React.FC<Props> = ({
       headerInputRef.current.focus();
     }
   }, [isCreating, headerInputRef]);
+
+  useEffect(() => {
+    if (headerInputRef.current) {
+      headerInputRef.current.focus();
+    }
+  }, [todos.length, headerInputRef]);
 
   return (
     <header className="todoapp__header">
@@ -52,48 +102,8 @@ export const Header: React.FC<Props> = ({
           value={currentCreatedTodo}
           className="todoapp__new-todo"
           placeholder="What needs to be done?"
-          onChange={e => {
-            setCurrentCreatedTodo(e.currentTarget.value);
-          }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-              const newTodo: Omit<Todo, 'id'> = {
-                userId: USER_ID,
-                title: e.currentTarget.value.trim(),
-                completed: false,
-              };
-
-              setIsCreating(true);
-              setTempTodo({ ...newTodo });
-
-              todosApi
-                .addTodo(newTodo)
-                .then(addedTodo => {
-                  setTodos((prevTodos: Todo[]) => [...prevTodos, addedTodo]);
-                  reset();
-
-                  setTempTodo(null);
-                  setIsCreating(false);
-                })
-                .catch(error => {
-                  setError('Unable to add a todo');
-                  setTimeout(() => {
-                    setError('');
-                    setIsCreating(false);
-                  }, 3000);
-                  setTimeout(() => {
-                    setTempTodo(null); // This ensures input is enabled after error
-                  }, 300);
-                  setCurrentCreatedTodo(currentCreatedTodo);
-                  throw error;
-                });
-            } else if (e.key === 'Enter') {
-              setError('Title should not be empty');
-              setTimeout(() => {
-                setError('');
-              }, 3000);
-            }
-          }}
+          onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
         />
       </form>
     </header>
