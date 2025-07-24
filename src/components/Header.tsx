@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import classNames from 'classnames';
 import { USER_ID } from '.././api/todos';
 import * as todosApi from '../api/todos';
 import { Todo } from '../types/Todo';
@@ -13,6 +14,9 @@ type Props = {
   setTodos: React.Dispatch<React.SetStateAction<Todo[]>>;
   setError: (error: string) => void;
   todos: Todo[];
+  allCompleted: boolean;
+  setAllCompleted: (value: boolean) => void;
+  setTodoStatus: (status: boolean) => void;
 };
 
 export const Header: React.FC<Props> = ({
@@ -25,6 +29,9 @@ export const Header: React.FC<Props> = ({
   setTodos,
   setError,
   todos,
+  allCompleted,
+  setAllCompleted,
+  setTodoStatus,
 }) => {
   const reset = () => {
     setCurrentCreatedTodo('');
@@ -35,10 +42,12 @@ export const Header: React.FC<Props> = ({
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+    const trimmedValue = e.currentTarget.value.trim();
+
+    if (e.key === 'Enter' && trimmedValue) {
       const newTodo: Omit<Todo, 'id'> = {
         userId: USER_ID,
-        title: e.currentTarget.value.trim(),
+        title: trimmedValue,
         completed: false,
       };
 
@@ -86,11 +95,54 @@ export const Header: React.FC<Props> = ({
 
   return (
     <header className="todoapp__header">
-      <button
-        type="button"
-        className="todoapp__toggle-all active"
-        data-cy="ToggleAllButton"
-      />
+      {todos.length > 0 && (
+        <button
+          type="button"
+          className={classNames('todoapp__toggle-all', {
+            active: allCompleted,
+            hidden: todos.length === 0,
+          })}
+          data-cy="ToggleAllButton"
+          onClick={() => {
+            setTodoStatus(true);
+            const newCompleted = !allCompleted;
+
+            const todosToUpdate = todos.filter(
+              todo => todo.completed !== newCompleted,
+            );
+
+            const updatedTodos = todos.map(todo =>
+              todosToUpdate.some(t => t.id === todo.id)
+                ? { ...todo, completed: newCompleted }
+                : todo,
+            );
+
+            setTodos(updatedTodos);
+            setAllCompleted(newCompleted);
+
+            if (todosToUpdate.length === 0) {
+              setTodoStatus(false);
+
+              return;
+            }
+
+            const updatePromises = todosToUpdate.map(item =>
+              todosApi.updateTodo(item.id, newCompleted, item.title),
+            );
+
+            Promise.all(updatePromises)
+              .then(() => {
+                setTodoStatus(false);
+              })
+              .catch(() => {
+                setError('Unable to update a todo');
+                setTimeout(() => {
+                  setTodoStatus(false);
+                }, 3000);
+              });
+          }}
+        />
+      )}
 
       <form onSubmit={e => e.preventDefault()}>
         <input
